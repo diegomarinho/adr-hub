@@ -25,7 +25,8 @@
     .kbd { border: 1px solid rgba(0,0,0,0.2); padding: 0.15rem 0.35rem; border-radius: 6px; font-size: .8rem; }
     .container-pro { max-width: 1200px; }
     .prose :where(h1,h2,h3){scroll-margin-top:6rem}
-    .badge { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium; }
+    .badge { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+    .icon-btn { margin-top: -0.25rem; /* levanta ligeiramente os botões */ } }
   </style>
 </head>
 <body class="min-h-full bg-gradient-to-b from-slate-50 to-slate-100 text-slate-800">
@@ -161,44 +162,45 @@
 
   <!-- Template vazia / Estado inicial -->
   <template id="row-template">
-    <div class="rounded-2xl border bg-white shadow-soft p-5 flex flex-col gap-3">
-      <div class="flex items-start justify-between gap-3">
-        <div class="min-w-0">
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-xs px-2 py-0.5 rounded bg-slate-900 text-white font-mono" data-bind="number"></span>
-            <h3 class="font-semibold truncate" data-bind="title"></h3>
+      <div class="rounded-2xl border bg-white shadow-soft p-5 flex flex-col gap-3">
+          <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                      <span class="text-xs px-2 py-0.5 rounded bg-slate-900 text-white font-mono" data-bind="number"></span>
+                      <h3 class="font-semibold truncate" data-bind="title"></h3>
+                  </div>
+                  <div class="text-sm text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+                      <span class="badge bg-slate-100 text-slate-600" data-bind="status"></span>
+                      <span class="">Autor: <span data-bind="author"></span></span>
+                      <span>Data: <span data-bind="date"></span></span>
+                      <span class="hidden md:inline">Atualizado: <span data-bind="updated_at"></span></span>
+                  </div>
+              </div>
+              <!-- Botões reposicionados -->
+              <div class="flex items-start gap-2 shrink-0 mt-1">
+                  <button class="icon-btn view p-2 rounded-lg border" title="Ver">
+                      <i data-lucide="eye" class="size-4"></i>
+                  </button>
+                  <button class="icon-btn edit p-2 rounded-lg border" title="Editar">
+                      <i data-lucide="pencil" class="size-4"></i>
+                  </button>
+                  <button class="icon-btn dup p-2 rounded-lg border" title="Duplicar">
+                      <i data-lucide="copy" class="size-4"></i>
+                  </button>
+                  <button class="icon-btn del p-2 rounded-lg border text-red-600" title="Excluir">
+                      <i data-lucide="trash" class="size-4"></i>
+                  </button>
+                  <button class="icon-btn md p-2 rounded-lg border" title="Baixar .md">
+                      <i data-lucide="download" class="size-4"></i>
+                  </button>
+                  <button class="icon-btn json p-2 rounded-lg border" title="Exportar JSON">
+                      <i data-lucide="braces" class="size-4"></i>
+                  </button>
+              </div>
           </div>
-          <div class="text-sm text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
-            <span class="badge bg-slate-100 text-slate-600" data-bind="status"></span>
-            <span class="">Autor: <span data-bind="author"></span></span>
-            <span>Data: <span data-bind="date"></span></span>
-            <span class="hidden md:inline">Atualizado: <span data-bind="updated_at"></span></span>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <button class="icon-btn view p-2 rounded-lg border" title="Ver">
-            <i data-lucide="eye" class="size-4"></i>
-          </button>
-          <button class="icon-btn edit p-2 rounded-lg border" title="Editar">
-            <i data-lucide="pencil" class="size-4"></i>
-          </button>
-          <button class="icon-btn dup p-2 rounded-lg border" title="Duplicar">
-            <i data-lucide="copy" class="size-4"></i>
-          </button>
-          <button class="icon-btn del p-2 rounded-lg border text-red-600" title="Excluir">
-            <i data-lucide="trash" class="size-4"></i>
-          </button>
-          <button class="icon-btn md p-2 rounded-lg border" title="Baixar .md">
-            <i data-lucide="download" class="size-4"></i>
-          </button>
-          <button class="icon-btn json p-2 rounded-lg border" title="Exportar JSON">
-            <i data-lucide="braces" class="size-4"></i>
-          </button>
-        </div>
+          <p class="text-sm text-slate-600 line-clamp-2" data-bind="context"></p>
+          <div class="flex items-center gap-2 flex-wrap" data-bind="tags"></div>
       </div>
-      <p class="text-sm text-slate-600 line-clamp-2" data-bind="context"></p>
-      <div class="flex items-center gap-2 flex-wrap" data-bind="tags"></div>
-    </div>
   </template>
 
   <input id="file-input" type="file" accept="application/json" class="hidden"/>
