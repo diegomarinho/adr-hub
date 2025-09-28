@@ -163,7 +163,7 @@
   <!-- Template vazia / Estado inicial -->
   <template id="row-template">
       <div class="rounded-2xl border bg-white shadow-soft p-5 flex flex-col gap-3">
-          <!-- Botões agora ficam no topo direito -->
+          <!-- Botões no topo -->
           <div class="flex items-center justify-end gap-2 mb-2">
               <button class="icon-btn view p-2 rounded-lg border" title="Ver">
                   <i data-lucide="eye" class="size-4"></i>
@@ -185,19 +185,21 @@
               </button>
           </div>
 
-          <!-- Título e metadados ficam mais limpos -->
+          <!-- Título e metadados -->
           <div class="min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
                   <span class="text-xs px-2 py-0.5 rounded bg-slate-900 text-white font-mono" data-bind="number"></span>
                   <h3 class="font-semibold truncate" data-bind="title"></h3>
               </div>
               <div class="text-sm text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
-                  <span class="badge bg-slate-100 text-slate-600" data-bind="status"></span>
+                  <!-- badge de status colorida -->
+                  <span class="badge" data-bind="status"></span>
                   <span class="">Autor: <span data-bind="author"></span></span>
                   <span>Data: <span data-bind="date"></span></span>
                   <span class="hidden md:inline">Atualizado: <span data-bind="updated_at"></span></span>
               </div>
           </div>
+
           <p class="text-sm text-slate-600 line-clamp-2" data-bind="context"></p>
           <div class="flex items-center gap-2 flex-wrap" data-bind="tags"></div>
       </div>
@@ -323,12 +325,35 @@
       const node = t.content.cloneNode(true);
       node.querySelector('[data-bind="number"]').textContent = a.number;
       node.querySelector('[data-bind="title"]').textContent = a.title;
-      node.querySelector('[data-bind="author"]').textContent = a.author||'-';
-      node.querySelector('[data-bind="date"]').textContent = a.date||'-';
+      node.querySelector('[data-bind="author"]').textContent = a.author || '-';
+      node.querySelector('[data-bind="date"]').textContent = a.date || '-';
       node.querySelector('[data-bind="status"]').textContent = a.status;
       node.querySelector('[data-bind="updated_at"]').textContent = new Date(a.updated_at).toLocaleString();
       node.querySelector('[data-bind="context"]').textContent = a.context?.slice(0,280)||'';
       const tags = node.querySelector('[data-bind="tags"]');
+
+      // === Status com cor distinta ===
+      const statusEl = node.querySelector('[data-bind="status"]');
+      statusEl.textContent = a.status;
+
+      statusEl.className = "badge"; // reset base
+      switch (a.status) {
+        case "Proposto":
+          statusEl.classList.add("bg-yellow-100", "text-yellow-700");
+          break;
+        case "Aceito":
+          statusEl.classList.add("bg-green-100", "text-green-700");
+          break;
+        case "Rejeitado":
+          statusEl.classList.add("bg-red-100", "text-red-700");
+          break;
+        case "Depreciado":
+          statusEl.classList.add("bg-gray-200", "text-gray-700");
+          break;
+        default:
+          statusEl.classList.add("bg-slate-100", "text-slate-600");
+      }
+
       (a.tags||[]).forEach(tag=>{
         const s = document.createElement('span');
         s.className = 'badge bg-sky-100 text-sky-700';
