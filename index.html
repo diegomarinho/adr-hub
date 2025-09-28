@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ADR Hub • Registro e Governança de Architecture Decision Records</title>
+  <meta name="description" content="Plataforma profissional para cadastrar, listar, revisar, aprovar e versionar Architecture Decision Records (ADRs)." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath fill='black' d='M40 64h176v24H40zm0 52h176v24H40zm0 52h120v24H40z'/%3E%3C/svg%3E"/>
+  <!-- Tailwind CSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <!-- localForage for IndexedDB storage -->
+  <script src="https://unpkg.com/localforage@1.10.0/dist/localforage.min.js"></script>
+  <!-- Marked for Markdown preview/export -->
+  <script src="https://unpkg.com/marked@12.0.1/marked.min.js"></script>
+  <!-- FileSaver for downloads -->
+  <script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <style>
+    /* Polimento visual */
+    html, body { height: 100%; }
+    .glass { backdrop-filter: blur(8px); background: rgba(255,255,255,0.7); }
+    .dark .glass { background: rgba(17,24,39,0.6); }
+    .shadow-soft { box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+    .kbd { border: 1px solid rgba(0,0,0,0.2); padding: 0.15rem 0.35rem; border-radius: 6px; font-size: .8rem; }
+    .container-pro { max-width: 1200px; }
+    .prose :where(h1,h2,h3){scroll-margin-top:6rem}
+    .badge { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium; }
+  </style>
+</head>
+<body class="min-h-full bg-gradient-to-b from-slate-50 to-slate-100 text-slate-800">
+  <!-- Header -->
+  <header class="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur">
+    <div class="mx-auto container-pro px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="size-9 grid place-items-center rounded-xl bg-slate-900 text-white font-bold">ADR</div>
+        <div>
+          <h1 class="text-lg font-bold leading-tight">ADR Hub</h1>
+          <p class="text-xs text-slate-500 -mt-0.5">Registre. Decida. Audite. Evolua.</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-import" class="px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-sm">Importar JSON</button>
+        <button id="btn-export-all" class="px-3 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-sm">Exportar Tudo</button>
+        <button id="btn-new" class="px-3 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 text-sm">Novo ADR</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toolbar filtros -->
+  <section class="mx-auto container-pro px-4 py-4">
+    <div class="glass shadow-soft rounded-2xl p-4">
+      <div class="grid md:grid-cols-4 gap-3">
+        <div class="col-span-2">
+          <label class="text-xs text-slate-500">Buscar</label>
+          <input id="search" type="search" placeholder="Título, autor, status, tag…" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">Status</label>
+          <select id="filter-status" class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            <option value="">Todos</option>
+            <option>Proposto</option>
+            <option>Aceito</option>
+            <option>Rejeitado</option>
+            <option>Depreciado</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">Ordenar</label>
+          <select id="sort" class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            <option value="-updated_at">Mais recentes</option>
+            <option value="title">Título (A→Z)</option>
+            <option value="status">Status</option>
+            <option value="date">Data</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Lista -->
+  <main class="mx-auto container-pro px-4 pb-24" id="list"></main>
+
+  <!-- Dialogo de Edição -->
+  <dialog id="dlg" class="w-full max-w-5xl rounded-2xl p-0 shadow-2xl backdrop:bg-black/30">
+    <form method="dialog" class="bg-white rounded-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b">
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 text-xs rounded bg-slate-900 text-white" id="dlg-number">ADR-XXX</span>
+          <input id="f-title" required class="text-lg font-semibold w-[52ch] max-w-full outline-none" placeholder="Título do ADR"/>
+        </div>
+        <div class="flex items-center gap-2">
+          <select id="f-status" class="px-2 py-1 rounded-lg border">
+            <option>Proposto</option>
+            <option>Aceito</option>
+            <option>Rejeitado</option>
+            <option>Depreciado</option>
+          </select>
+          <button value="cancel" class="px-3 py-2 rounded-lg border">Cancelar</button>
+          <button id="btn-save" value="confirm" class="px-3 py-2 rounded-lg bg-emerald-600 text-white">Salvar</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 max-h-[70vh] overflow-y-auto">
+        <div class="space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-slate-500">Autor</label>
+              <input id="f-author" class="w-full px-3 py-2 rounded-lg border" placeholder="Nome do Autor"/>
+            </div>
+            <div>
+              <label class="text-xs text-slate-500">Data</label>
+              <input id="f-date" type="date" class="w-full px-3 py-2 rounded-lg border"/>
+            </div>
+          </div>
+          <div>
+            <label class="text-xs text-slate-500">Relacionado a</label>
+            <input id="f-related" class="w-full px-3 py-2 rounded-lg border" placeholder="ADR-002, ADR-010…"/>
+          </div>
+          <div>
+            <label class="text-xs text-slate-500">Tags (separe por vírgula)</label>
+            <input id="f-tags" class="w-full px-3 py-2 rounded-lg border" placeholder="segurança, kafka, postgres"/>
+          </div>
+          <div>
+            <label class="text-xs text-slate-500">Contexto</label>
+            <textarea id="f-context" rows="6" class="w-full px-3 py-2 rounded-lg border" placeholder="Descreva o contexto e o problema…"></textarea>
+          </div>
+          <div>
+            <label class="text-xs text-slate-500">Decisão</label>
+            <textarea id="f-decision" rows="4" class="w-full px-3 py-2 rounded-lg border" placeholder="Escolhemos a opção X porque…"></textarea>
+          </div>
+        </div>
+        <div class="space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-slate-500">Opções Consideradas (Markdown)</label>
+              <textarea id="f-options" rows="10" class="w-full px-3 py-2 rounded-lg border" placeholder="Opção 1: …\nPrós:\n- …\nContras:\n- …\n\nOpção 2: …"></textarea>
+            </div>
+            <div>
+              <label class="text-xs text-slate-500">Consequências (Markdown)</label>
+              <textarea id="f-consequences" rows="10" class="w-full px-3 py-2 rounded-lg border" placeholder="Positivas:\n- …\n- …\n\nNegativas:\n- …\n- …"></textarea>
+            </div>
+          </div>
+          <div>
+            <label class="text-xs text-slate-500">Conformidade</label>
+            <textarea id="f-compliance" rows="3" class="w-full px-3 py-2 rounded-lg border" placeholder="Como verificaremos que a implementação está em conformidade…"></textarea>
+          </div>
+          <div>
+            <label class="text-xs text-slate-500">Notas</label>
+            <textarea id="f-notes" rows="3" class="w-full px-3 py-2 rounded-lg border" placeholder="Links, referências, anexos, etc."></textarea>
+          </div>
+          <div class="flex gap-2">
+            <button id="btn-preview" type="button" class="px-3 py-2 rounded-lg border">Pré-visualizar Markdown</button>
+            <button id="btn-export-md" type="button" class="px-3 py-2 rounded-lg border">Exportar como .md</button>
+          </div>
+          <article id="preview" class="prose max-w-none hidden border rounded-lg p-4"></article>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Template vazia / Estado inicial -->
+  <template id="row-template">
+    <div class="rounded-2xl border bg-white shadow-soft p-5 flex flex-col gap-3">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs px-2 py-0.5 rounded bg-slate-900 text-white font-mono" data-bind="number"></span>
+            <h3 class="font-semibold truncate" data-bind="title"></h3>
+          </div>
+          <div class="text-sm text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+            <span class="badge bg-slate-100 text-slate-600" data-bind="status"></span>
+            <span class="">Autor: <span data-bind="author"></span></span>
+            <span>Data: <span data-bind="date"></span></span>
+            <span class="hidden md:inline">Atualizado: <span data-bind="updated_at"></span></span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button class="icon-btn view p-2 rounded-lg border" title="Ver">
+            <i data-lucide="eye" class="size-4"></i>
+          </button>
+          <button class="icon-btn edit p-2 rounded-lg border" title="Editar">
+            <i data-lucide="pencil" class="size-4"></i>
+          </button>
+          <button class="icon-btn dup p-2 rounded-lg border" title="Duplicar">
+            <i data-lucide="copy" class="size-4"></i>
+          </button>
+          <button class="icon-btn del p-2 rounded-lg border text-red-600" title="Excluir">
+            <i data-lucide="trash" class="size-4"></i>
+          </button>
+          <button class="icon-btn md p-2 rounded-lg border" title="Baixar .md">
+            <i data-lucide="download" class="size-4"></i>
+          </button>
+          <button class="icon-btn json p-2 rounded-lg border" title="Exportar JSON">
+            <i data-lucide="braces" class="size-4"></i>
+          </button>
+        </div>
+      </div>
+      <p class="text-sm text-slate-600 line-clamp-2" data-bind="context"></p>
+      <div class="flex items-center gap-2 flex-wrap" data-bind="tags"></div>
+    </div>
+  </template>
+
+  <input id="file-input" type="file" accept="application/json" class="hidden"/>
+
+  <footer class="fixed bottom-0 inset-x-0 bg-white/90 border-t">
+    <div class="mx-auto container-pro px-4 py-3 text-xs text-slate-500 flex items-center justify-between gap-3">
+      <div>
+        <span class="kbd">/</span> para buscar • <span class="kbd">N</span> novo • <span class="kbd">E</span> exportar tudo • <span class="kbd">?</span> ajuda
+      </div>
+      <div>
+        Feito para times de Arquitetura — <a class="underline" href="#" id="open-help">Guia de Publicação</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Help Modal (publicação) -->
+  <dialog id="help" class="w-full max-w-3xl rounded-2xl p-0 shadow-2xl backdrop:bg-black/30">
+    <form method="dialog" class="bg-white rounded-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b">
+        <h3 class="font-semibold">Como publicar publicamente (GitHub Pages / Netlify)</h3>
+        <button value="cancel" class="px-3 py-1.5 rounded-lg border">Fechar</button>
+      </div>
+      <div class="p-5 text-sm space-y-4">
+        <ol class="list-decimal pl-5 space-y-2">
+          <li><strong>GitHub Pages (estático):</strong>
+            <ul class="list-disc pl-5">
+              <li>Crie um repositório <em>public</em> no GitHub chamado <code>adr-hub</code>.</li>
+              <li>Adicione este arquivo <code>index.html</code> na raiz e faça commit.</li>
+              <li>Vá em <em>Settings → Pages</em>, selecione <em>Deploy from a branch</em> e escolha <code>main / root</code>.</li>
+              <li>O site ficará disponível em <code>https://seuusuario.github.io/adr-hub/</code>.</li>
+            </ul>
+          </li>
+          <li><strong>Netlify (arrastar e soltar):</strong>
+            <ul class="list-disc pl-5">
+              <li>Acesse netlify.app, clique em <em>Deploy site</em> e arraste este <code>index.html</code>.</li>
+              <li>Vincule um domínio personalizado, se desejar.</li>
+            </ul>
+          </li>
+          <li><strong>Vercel:</strong> Crie um projeto estático, importe do GitHub e aponte para a raiz contendo este <code>index.html</code>.</li>
+        </ol>
+        <p class="text-slate-600">Os dados são salvos no seu navegador (IndexedDB) por padrão. Para publicar com backend multiusuário, veja o README no final deste arquivo (seção "Backend opcional").</p>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    // ======== Configuração de armazenamento ========
+    const DB = localforage.createInstance({ name: 'adr-hub', storeName: 'adrs' });
+
+    // ======== Utilidades ========
+    const $ = (sel, el=document) => el.querySelector(sel);
+    const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+    const fmtDate = (d) => d ? new Date(d).toISOString().slice(0,10) : '';
+    const uid = () => crypto.randomUUID();
+
+    function mdEscape(s='') { return s.replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+    function fromForm() {
+      return {
+        id: current?.id || uid(),
+        number: current?.number || nextNumber(),
+        title: $('#f-title').value.trim(),
+        author: $('#f-author').value.trim(),
+        date: $('#f-date').value || fmtDate(new Date()),
+        status: $('#f-status').value,
+        related: $('#f-related').value.trim(),
+        tags: $('#f-tags').value.split(',').map(s=>s.trim()).filter(Boolean),
+        context: $('#f-context').value.trim(),
+        options_md: $('#f-options').value.trim(),
+        decision: $('#f-decision').value.trim(),
+        consequences_md: $('#f-consequences').value.trim(),
+        compliance: $('#f-compliance').value.trim(),
+        notes: $('#f-notes').value.trim(),
+        created_at: current?.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+    }
+
+    function toForm(a) {
+      $('#dlg-number').textContent = a.number;
+      $('#f-title').value = a.title || '';
+      $('#f-author').value = a.author || '';
+      $('#f-date').value = a.date || fmtDate(new Date());
+      $('#f-status').value = a.status || 'Proposto';
+      $('#f-related').value = a.related || '';
+      $('#f-tags').value = (a.tags||[]).join(', ');
+      $('#f-context').value = a.context || '';
+      $('#f-options').value = a.options_md || '';
+      $('#f-decision').value = a.decision || '';
+      $('#f-consequences').value = a.consequences_md || '';
+      $('#f-compliance').value = a.compliance || '';
+      $('#f-notes').value = a.notes || '';
+    }
+
+    function nextNumber() {
+      // Simple incremental ADR-XXX based on existing max
+      return (window.__cacheMax||0, window.__cacheMax = (window.__cacheMax||0));
+    }
+
+    async function recomputeMaxNumber(list) {
+      const max = list.reduce((m,a)=>{
+        const n = parseInt(String(a.number||'').replace(/\D/g,''))||0; return Math.max(m,n);
+      },0);
+      window.__cacheMax = max;
+    }
+
+    function allocNumber() {
+      window.__cacheMax = (window.__cacheMax||0) + 1;
+      return `ADR-${String(window.__cacheMax).padStart(3,'0')}`;
+    }
+
+    function toMarkdown(a) {
+      const tags = (a.tags||[]).length ? `\nTags: ${a.tags.join(', ')}` : '';
+      const related = a.related ? a.related : 'N/A';
+      return `# ${mdEscape(a.number)}: ${mdEscape(a.title)}\n${mdEscape(a.status)}\nData: ${a.date}\nAutor: ${mdEscape(a.author||'')}\nStatus: ${mdEscape(a.status)}\nRelacionado a: ${mdEscape(related)}${tags}\n\n## Contexto\n${a.context}\n\n## Opções Consideradas\n${a.options_md}\n\n## Decisão\n${a.decision}\n\n## Consequências\n${a.consequences_md}\n\n## Conformidade\n${a.compliance}\n\n## Notas\n${a.notes}\n`;
+    }
+
+    function renderRow(a) {
+      const t = document.getElementById('row-template');
+      const node = t.content.cloneNode(true);
+      node.querySelector('[data-bind="number"]').textContent = a.number;
+      node.querySelector('[data-bind="title"]').textContent = a.title;
+      node.querySelector('[data-bind="author"]').textContent = a.author||'-';
+      node.querySelector('[data-bind="date"]').textContent = a.date||'-';
+      node.querySelector('[data-bind="status"]').textContent = a.status;
+      node.querySelector('[data-bind="updated_at"]').textContent = new Date(a.updated_at).toLocaleString();
+      node.querySelector('[data-bind="context"]').textContent = a.context?.slice(0,280)||'';
+      const tags = node.querySelector('[data-bind="tags"]');
+      (a.tags||[]).forEach(tag=>{
+        const s = document.createElement('span');
+        s.className = 'badge bg-sky-100 text-sky-700';
+        s.textContent = `#${tag}`;
+        tags.appendChild(s);
+      });
+
+      const row = document.createElement('div');
+      row.appendChild(node);
+      // actions
+      row.querySelector('.view').onclick = () => viewAdr(a);
+      row.querySelector('.edit').onclick = () => openEditor(a);
+      row.querySelector('.del').onclick = () => removeAdr(a);
+      row.querySelector('.dup').onclick = () => duplicateAdr(a);
+      row.querySelector('.md').onclick = () => downloadMarkdown(a);
+      row.querySelector('.json').onclick = () => downloadJSON(a);
+      return row.firstElementChild;
+    }
+
+    function filterSort(list) {
+      const q = $('#search').value.toLowerCase();
+      const st = $('#filter-status').value;
+      const sort = $('#sort').value;
+      let r = list.filter(a=>{
+        const m = `${a.title} ${a.author} ${a.status} ${a.number} ${(a.tags||[]).join(' ')}`.toLowerCase();
+        const okQ = !q || m.includes(q);
+        const okS = !st || a.status===st;
+        return okQ && okS;
+      });
+      r.sort((a,b)=>{
+        const dir = sort.startsWith('-')?-1:1;
+        const key = sort.replace('-','');
+        return (a[key]||'').localeCompare((b[key]||'')) * dir;
+      });
+      if(sort==="-updated_at") r.sort((a,b)=> new Date(b.updated_at)-new Date(a.updated_at));
+      return r;
+    }
+
+    async function refresh() {
+      const keys = await DB.keys();
+      const items = [];
+      for (const k of keys) items.push(await DB.getItem(k));
+      await recomputeMaxNumber(items);
+      const list = $('#list');
+      list.innerHTML = '';
+      const rows = filterSort(items).map(renderRow);
+      if(!rows.length) {
+        list.innerHTML = `<div class='text-center text-slate-500 py-20'>Nenhum ADR cadastrado ainda. Clique em <b>Novo ADR</b> para começar.</div>`;
+      } else {
+        const grid = document.createElement('div');
+        grid.className = 'grid sm:grid-cols-2 lg:grid-cols-3 gap-4';
+        rows.forEach(r=>grid.appendChild(r));
+        list.appendChild(grid);
+      }
+      lucide.createIcons();
+    }
+
+    // ======== CRUD ========
+    let current = null;
+
+    function openEditor(a=null) {
+      current = a;
+      if (!a) {
+        a = { number: allocNumber(), status:'Proposto', date: fmtDate(new Date()) };
+      }
+      toForm(a);
+      document.getElementById('dlg').showModal();
+    }
+
+    async function saveCurrent() {
+      const a = fromForm();
+      await DB.setItem(a.id, a);
+      document.getElementById('dlg').close();
+      await refresh();
+    }
+
+    async function removeAdr(a) {
+      if(confirm(`Excluir ${a.number} — ${a.title}?`)){
+        await DB.removeItem(a.id);
+        await refresh();
+      }
+    }
+
+    async function duplicateAdr(a) {
+      const copy = JSON.parse(JSON.stringify(a));
+      copy.id = uid();
+      copy.number = allocNumber();
+      copy.title = copy.title + ' (cópia)';
+      copy.created_at = new Date().toISOString();
+      copy.updated_at = copy.created_at;
+      await DB.setItem(copy.id, copy);
+      await refresh();
+    }
+
+    function viewAdr(a){
+      // abre editor em modo leitura com preview ligado
+      openEditor(a);
+      document.getElementById('btn-preview').click();
+    }
+
+    // ======== Import/Export ========
+    function downloadMarkdown(a){
+      const blob = new Blob([toMarkdown(a)], {type:'text/markdown;charset=utf-8'});
+      saveAs(blob, `${a.number}-${a.title.replace(/[^a-z0-9-_]/gi,'_')}.md`);
+    }
+
+    function downloadJSON(a){
+      const blob = new Blob([JSON.stringify(a,null,2)], {type:'application/json'});
+      saveAs(blob, `${a.number}.json`);
+    }
+
+    async function exportAll(){
+      const keys = await DB.keys();
+      const items = [];
+      for (const k of keys) items.push(await DB.getItem(k));
+      const blob = new Blob([JSON.stringify(items,null,2)], {type:'application/json'});
+      saveAs(blob, `adr-export-${new Date().toISOString().slice(0,10)}.json`);
+    }
+
+    async function importJSON(file){
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const arr = Array.isArray(json) ? json : [json];
+      for (const a of arr){
+        if(!a.id) a.id = uid();
+        if(!a.number) a.number = allocNumber();
+        a.updated_at = new Date().toISOString();
+        if(!a.created_at) a.created_at = a.updated_at;
+        await DB.setItem(a.id, a);
+      }
+      await refresh();
+      alert('Importação concluída.');
+    }
+
+    // ======== Preview ========
+    function updatePreview(){
+      const a = fromForm();
+      const html = marked.parse(toMarkdown(a));
+      const prev = document.getElementById('preview');
+      prev.innerHTML = html;
+    }
+
+    // ======== Eventos UI ========
+    document.getElementById('btn-new').onclick = () => openEditor();
+    document.getElementById('btn-save').onclick = (e) => { e.preventDefault(); saveCurrent(); };
+    document.getElementById('btn-export-all').onclick = exportAll;
+
+    document.getElementById('btn-preview').onclick = () => {
+      const prev = document.getElementById('preview');
+      prev.classList.toggle('hidden');
+      updatePreview();
+    }
+    document.getElementById('btn-export-md').onclick = () => downloadMarkdown(fromForm());
+
+    // filtros
+    ['search','filter-status','sort'].forEach(id=>{
+      document.getElementById(id).addEventListener('input', refresh);
+      document.getElementById(id).addEventListener('change', refresh);
+    });
+
+    // import
+    document.getElementById('btn-import').onclick = () => document.getElementById('file-input').click();
+    document.getElementById('file-input').onchange = (e)=>{
+      const f = e.target.files?.[0]; if(f) importJSON(f);
+      e.target.value = '';
+    }
+
+    // atalhos
+    window.addEventListener('keydown', (e)=>{
+      if(e.key === '/' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA'){
+        e.preventDefault(); document.getElementById('search').focus();
+      }
+      if((e.key === 'n' || e.key==='N') && !$('#dlg').open){ openEditor(); }
+      if((e.key === 'e' || e.key==='E') && !$('#dlg').open){ exportAll(); }
+      if(e.key === '?' && !$('#help').open){ document.getElementById('help').showModal(); }
+    })
+
+    document.getElementById('open-help').onclick = ()=> document.getElementById('help').showModal();
+
+    // ======== Seed de exemplo ========
+    async function seedIfEmpty(){
+      const keys = await DB.keys();
+      if(keys.length) return;
+      const sample = {
+        id: uid(),
+        number: 'ADR-001',
+        title: 'Adoção de Arquitetura de Microsserviços',
+        author: 'João Silva',
+        date: '2025-03-15',
+        status: 'Aceito',
+        related: 'N/A',
+        tags: ['arquitetura','microsservicos','escalabilidade'],
+        context: 'Nosso sistema atual é um monolito que… (resumo do contexto).',
+        options_md: 'Opção 1: Refatorar o Monolito\n\nPrós:\n- Menor risco de transição\n- Menor complexidade operacional\n\nContras:\n- Não resolve completamente escalabilidade\n- Limitações na adoção de novas tecnologias\n\nOpção 2: Arquitetura de Microsserviços\n\nPrós:\n- Escalabilidade independente\n- Equipes autônomas\n\nContras:\n- Complexidade operacional\n- Consistência de dados',
+        decision: 'Escolhemos Microsserviços porque atende escalabilidade, autonomia e velocidade de entrega. Migração gradual começando pelos domínios mais independentes.',
+        consequences_md: 'Positivas:\n- Agilidade no desenvolvimento\n- Melhor isolamento de falhas\n\nNegativas:\n- Maior complexidade de observabilidade\n- Treinamento do time',
+        compliance: 'Diretrizes de Bounded Contexts, padrões de comunicação, CI/CD por serviço, métricas SLO por serviço.',
+        notes: 'Referências: Sam Newman; Eric Evans; Chris Richardson.',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      await DB.setItem(sample.id, sample);
+    }
+
+    // ======== Backend opcional (README curto) ========
+    const README_BACKEND = `\n\n---\n### Backend opcional (multiusuário)\nSe desejar autenticação e persistência centralizada:\n1) Crie uma API (Node/Express, NestJS ou Next.js API Routes) com endpoints CRUD: \n   - GET /adrs, GET /adrs/:id, POST /adrs, PUT /adrs/:id, DELETE /adrs/:id\n2) Banco: SQLite/PostgreSQL com esquema simples:\n\n   adrs(id uuid pk, number text unique, title text, author text, date text, status text, related text, tags text[], context text, options_md text, decision text, consequences_md text, compliance text, notes text, created_at timestamptz, updated_at timestamptz)\n\n3) Autenticação: JWT ou OAuth (GitHub/Google).\n4) Hospede no Vercel/Render/Fly.io.\n5) Altere este arquivo substituindo localForage por chamadas fetch() à API.\n`;
+
+    // ======== Boot ========
+    (async function init(){
+      await seedIfEmpty();
+      await refresh();
+    })();
+  </script>
+</body>
+</html>
