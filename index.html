@@ -163,39 +163,39 @@
   <!-- Template vazia / Estado inicial -->
   <template id="row-template">
       <div class="rounded-2xl border bg-white shadow-soft p-5 flex flex-col gap-3">
-          <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                  <div class="flex items-center gap-2 flex-wrap">
-                      <span class="text-xs px-2 py-0.5 rounded bg-slate-900 text-white font-mono" data-bind="number"></span>
-                      <h3 class="font-semibold truncate" data-bind="title"></h3>
-                  </div>
-                  <div class="text-sm text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
-                      <span class="badge bg-slate-100 text-slate-600" data-bind="status"></span>
-                      <span class="">Autor: <span data-bind="author"></span></span>
-                      <span>Data: <span data-bind="date"></span></span>
-                      <span class="hidden md:inline">Atualizado: <span data-bind="updated_at"></span></span>
-                  </div>
+          <!-- Botões agora ficam no topo direito -->
+          <div class="flex items-center justify-end gap-2 mb-2">
+              <button class="icon-btn view p-2 rounded-lg border" title="Ver">
+                  <i data-lucide="eye" class="size-4"></i>
+              </button>
+              <button class="icon-btn edit p-2 rounded-lg border" title="Editar">
+                  <i data-lucide="pencil" class="size-4"></i>
+              </button>
+              <button class="icon-btn dup p-2 rounded-lg border" title="Duplicar">
+                  <i data-lucide="copy" class="size-4"></i>
+              </button>
+              <button class="icon-btn del p-2 rounded-lg border text-red-600" title="Excluir">
+                  <i data-lucide="trash" class="size-4"></i>
+              </button>
+              <button class="icon-btn md p-2 rounded-lg border" title="Baixar .md">
+                  <i data-lucide="download" class="size-4"></i>
+              </button>
+              <button class="icon-btn json p-2 rounded-lg border" title="Exportar JSON">
+                  <i data-lucide="braces" class="size-4"></i>
+              </button>
+          </div>
+
+          <!-- Título e metadados ficam mais limpos -->
+          <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-xs px-2 py-0.5 rounded bg-slate-900 text-white font-mono" data-bind="number"></span>
+                  <h3 class="font-semibold truncate" data-bind="title"></h3>
               </div>
-              <!-- Botões reposicionados -->
-              <div class="flex items-start gap-2 shrink-0 mt-1">
-                  <button class="icon-btn view p-2 rounded-lg border" title="Ver">
-                      <i data-lucide="eye" class="size-4"></i>
-                  </button>
-                  <button class="icon-btn edit p-2 rounded-lg border" title="Editar">
-                      <i data-lucide="pencil" class="size-4"></i>
-                  </button>
-                  <button class="icon-btn dup p-2 rounded-lg border" title="Duplicar">
-                      <i data-lucide="copy" class="size-4"></i>
-                  </button>
-                  <button class="icon-btn del p-2 rounded-lg border text-red-600" title="Excluir">
-                      <i data-lucide="trash" class="size-4"></i>
-                  </button>
-                  <button class="icon-btn md p-2 rounded-lg border" title="Baixar .md">
-                      <i data-lucide="download" class="size-4"></i>
-                  </button>
-                  <button class="icon-btn json p-2 rounded-lg border" title="Exportar JSON">
-                      <i data-lucide="braces" class="size-4"></i>
-                  </button>
+              <div class="text-sm text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+                  <span class="badge bg-slate-100 text-slate-600" data-bind="status"></span>
+                  <span class="">Autor: <span data-bind="author"></span></span>
+                  <span>Data: <span data-bind="date"></span></span>
+                  <span class="hidden md:inline">Atualizado: <span data-bind="updated_at"></span></span>
               </div>
           </div>
           <p class="text-sm text-slate-600 line-clamp-2" data-bind="context"></p>
